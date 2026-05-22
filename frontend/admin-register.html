@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartFace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body class="login-bg">
+    <div class="login-container glass-card" id="app-container"
+        style="display: flex; flex-direction: column; align-items: center;">
+        <img src="/assets/logo.png" alt="SmartFace logo" class="app-logo" />
+        <h2 style="margin-bottom: 20px;">Create Admin Account</h2>
+        <div id="sign-up-container"></div>
+        <div class="demo-links" style="margin-top: 20px; font-size: 0.9em;">
+            <a href="/" style="color: var(--primary-light);">Back to Login</a>
+            <p style="color:var(--text-muted);font-size:0.85rem;margin-top:8px;">Owner: samirthakur829@gmail.com</p>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/particles.js"></script>
+    <script>
+        const PUBLISHABLE_KEY = 'pk_test_Y29tcG9zZWQtd2Fob28tODIuY2xlcmsuYWNjb3VudHMuZGV2JA';
+        const script = document.createElement('script');
+        script.src = 'https://composed-wahoo-82.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        script.setAttribute('data-clerk-publishable-key', PUBLISHABLE_KEY);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+
+        script.addEventListener('load', async function () {
+            await window.Clerk.load({
+                signInUrl: 'https://composed-wahoo-82.accounts.dev/sign-in',
+                signUpUrl: 'https://composed-wahoo-82.accounts.dev/sign-up',
+                afterSignInUrl: '/admin-register',
+                afterSignUpUrl: '/admin-register'
+            });
+            if (window.Clerk.user) {
+                sessionStorage.setItem('loginRole', 'admin');
+                await finishLoginAndRedirect();
+            } else {
+                const signUpContainer = document.getElementById('sign-up-container');
+                window.Clerk.mountSignUp(signUpContainer, {
+                    appearance: {
+                        elements: {
+                            rootBox: {
+                                width: '100%',
+                            },
+                            card: {
+                                width: '100%',
+                                boxShadow: 'none',
+                                padding: '0',
+                                backgroundColor: 'transparent'
+                            }
+                        }
+                    }
+                });
+            }
+        });
+        document.body.appendChild(script);
+    </script>
+</body>
+
+</html>

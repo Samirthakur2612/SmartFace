@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Requests - SmartFace</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        <nav class="sidebar">
+            <div class="logo-container">
+                <img src="/assets/logo.png" alt="SmartFace" class="logo-img" />
+                <div class="logo-text">
+                    <h2>SmartFace</h2>
+                    <p>Owner Panel</p>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/dashboard" class="nav-item">Dashboard</a></li>
+                <li><a href="/access-requests" class="nav-item active">Access Requests</a></li>
+                <li><a href="/students" class="nav-item">Students</a></li>
+            </ul>
+            <a href="#" class="nav-item logout-btn" id="logoutBtn">Logout</a>
+        </nav>
+
+        <main class="main-content">
+            <div class="header">
+                <h1>Login Access Requests</h1>
+                <p>Approve who can sign in — requests are also emailed to samirthakur829@gmail.com</p>
+            </div>
+
+            <div class="glass-card">
+                <div id="requestsList" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <p style="color: var(--text-muted); text-align: center; padding: 2rem;">Loading...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        const PUBLISHABLE_KEY = 'pk_test_Y29tcG9zZWQtd2Fob28tODIuY2xlcmsuYWNjb3VudHMuZGV2JA';
+        const script = document.createElement('script');
+        script.src = 'https://composed-wahoo-82.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        script.setAttribute('data-clerk-publishable-key', PUBLISHABLE_KEY);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+
+        script.addEventListener('load', async function () {
+            await window.Clerk.load();
+            if (!window.Clerk.user) {
+                navigateTo('/');
+                return;
+            }
+            const user = await requireOwnerOrAdmin();
+            if (user) loadRequests();
+        });
+        document.body.appendChild(script);
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+
+        async function loadRequests() {
+            const res = await apiFetch('/api/users/access-requests/pending');
+            const list = document.getElementById('requestsList');
+            if (!res.ok) {
+                list.innerHTML = '<p style="color:#EF4444;text-align:center;">Failed to load requests</p>';
+                return;
+            }
+            const requests = await res.json();
+            if (requests.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem;">No pending requests</p>';
+                return;
+            }
+            list.innerHTML = requests.map(r => `
+                <div style="padding:1.25rem;background:rgba(255,255,255,0.04);border-radius:10px;border:1px solid rgba(255,255,255,0.1);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
+                        <div>
+                            <strong style="font-size:1.1rem;">${r.name}</strong>
+                            <div style="color:var(--text-muted);margin-top:0.25rem;">${r.email}</div>
+                            <div style="margin-top:0.5rem;">Wants: <span style="color:#3B82F6;">${r.requestedRole === 'admin' ? 'Admin' : 'Student'}</span>
+                            · ${new Date(r.createdAt).toLocaleString()}</div>
+                        </div>
+                        <div style="display:flex;gap:0.5rem;">
+                            <button class="btn btn-primary" onclick="approveUser('${r.clerkId}')">Approve</button>
+                            <button class="btn" style="background:rgba(239,68,68,0.2);color:#EF4444;" onclick="rejectUser('${r.clerkId}')">Reject</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function approveUser(clerkId) {
+            const res = await apiFetch(`/api/users/access-requests/approve/${clerkId}`, { method: 'PUT' });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('User approved — they can login now', 'success');
+                loadRequests();
+            } else {
+                showToast(data.message || 'Error', 'error');
+            }
+        }
+
+        async function rejectUser(clerkId) {
+            if (!confirm('Reject this login request?')) return;
+            const res = await apiFetch(`/api/users/access-requests/reject/${clerkId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: 'Rejected by owner' })
+            });
+            if (res.ok) {
+                showToast('Request rejected', 'success');
+                loadRequests();
+            }
+        }
+    </script>
+</body>
+
+</html>

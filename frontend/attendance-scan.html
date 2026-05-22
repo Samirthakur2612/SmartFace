@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartFace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/face-api.min.js"></script>
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo-container">
+                <img src="/assets/logo.png" alt="SmartFace logo" class="logo-img" />
+                <div class="logo-text">
+                    <h2>SmartFace</h2>
+                    <p>Admin Panel</p>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/dashboard" class="nav-item">View Attendance</a></li>
+                <li><a href="/attendance-records" class="nav-item">Attendance Records</a></li>
+                <li><a href="/attendance-scan" class="nav-item active">Attendance Scan</a></li>
+                <li><a href="/register" class="nav-item">Register Student</a></li>
+                <li><a href="/students" class="nav-item">Manage Students</a></li>
+                <li><a href="/add-class" class="nav-item">➕ Add Class</a></li>
+                <li><a href="/class-management" class="nav-item">📅 Manage Classes</a></li>
+                <li><a href="/leave-management" class="nav-item">Leave Requests</a></li>
+                <li><a href="/leaves-calendar" class="nav-item">Leave Calendar</a></li>
+            </ul>
+            <a href="#" class="nav-item logout-btn" id="logoutBtn">Logout</a>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1>Scan & Mark Attendance</h1>
+            </div>
+
+            <div class="registration-split">
+                <div class="glass-card camera-panel">
+                    <div class="camera-container">
+                        <video id="video" muted playsinline></video>
+                        <canvas id="overlay"></canvas>
+                        <div id="statusText" class="status-overlay">Initializing...</div>
+                    </div>
+                </div>
+
+                <div class="glass-card form-panel">
+                    <h3>Recent Scans</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 1rem;">Students will be marked automatically when recognized.</p>
+                    <button id="startScanBtn" class="btn btn-primary" style="margin-bottom: 1rem;">Start Scanning</button>
+                    <div id="logsContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/particles.js"></script>
+    <script>
+        const PUBLISHABLE_KEY = 'pk_test_Y29tcG9zZWQtd2Fob28tODIuY2xlcmsuYWNjb3VudHMuZGV2JA';
+        const script = document.createElement('script');
+        script.src = 'https://composed-wahoo-82.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        script.setAttribute('data-clerk-publishable-key', PUBLISHABLE_KEY);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+
+        script.addEventListener('load', async function () {
+            await window.Clerk.load({
+                signInUrl: 'https://composed-wahoo-82.accounts.dev/sign-in',
+                signUpUrl: 'https://composed-wahoo-82.accounts.dev/sign-up'
+            });
+            if (!window.Clerk.user) {
+                window.Clerk.redirectToSignIn({ returnBackUrl: window.location.href });
+            } else {
+                await requirePageRole('admin');
+            }
+        });
+        document.body.appendChild(script);
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+
+        const video = document.getElementById('video');
+        const overlay = document.getElementById('overlay');
+        const statusText = document.getElementById('statusText');
+        const logsContainer = document.getElementById('logsContainer');
+
+        let isProcessing = false;
+        
+        function addLog(name, status, isError = false) {
+            const time = new Date().toLocaleTimeString();
+            const item = document.createElement('div');
+            item.className = 'log-item';
+            item.style.display = 'flex';
+            item.style.justifyContent = 'space-between';
+            item.style.padding = '0.6rem 0.2rem';
+            item.style.borderBottom = '1px solid rgba(255,255,255,0.06)';
+            
+            const color = isError ? 'var(--danger-color)' : 'var(--secondary-color)';
+            item.innerHTML = `<span><strong>${name}</strong></span><span style="color: ${color}">${status} @ ${time}</span>`;
+            
+            logsContainer.prepend(item);
+            while (logsContainer.children.length > 8) logsContainer.lastChild.remove();
+        }
+
+        async function init() {
+            // Camera will be started on button click
+        }
+
+        document.getElementById('startScanBtn').addEventListener('click', async () => {
+            try {
+                statusText.textContent = "Starting Camera...";
+                statusText.style.background = 'rgba(0,0,0,0.7)';
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+                video.srcObject = stream;
+                await video.play(); // Ensure video plays
+                document.getElementById('startScanBtn').disabled = true;
+                document.getElementById('startScanBtn').textContent = 'Scanning...';
+            } catch (err) {
+                console.error(err);
+                statusText.textContent = 'Camera error or permission denied.';
+                statusText.style.background = 'rgba(239, 68, 68, 0.7)';
+            }
+        });
+
+        // Send a frame to the backend every few seconds
+        video.addEventListener('play', () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            statusText.textContent = "Scanning securely on the server...";
+
+            setInterval(async () => {
+                if (video.paused || video.ended || isProcessing || video.videoWidth === 0 || video.videoHeight === 0) return;
+
+                console.log('Sending frame to backend...');
+
+                // Update canvas size to match video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                // Capture current frame
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+
+                await scanImageOnBackend(base64Image);
+            }, 1500); // Check every 1.5 seconds
+        });
+
+        async function scanImageOnBackend(base64Image) {
+            isProcessing = true;
+            try {
+                // Flash the status text lightly to show activity
+                statusText.style.opacity = '0.5';
+                setTimeout(() => statusText.style.opacity = '1', 200);
+
+                const res = await apiFetch('/api/attendance/scan-custom', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageBase64: base64Image })
+                });
+
+                console.log('Backend response status:', res.status);
+
+                const data = await res.json();
+
+                console.log('Backend response data:', data);
+
+                if (res.ok) {
+                    showToast(`Attendance marked for ${data.name}! (Confidence: ${data.confidence})`, 'success');
+                    addLog(data.name, 'Marked Present');
+                    
+                    statusText.textContent = `Recognized: ${data.name}`;
+                    statusText.style.background = 'rgba(16, 185, 129, 0.7)';
+                    
+                    // Hold the green status for a bit before reverting
+                    setTimeout(() => {
+                        statusText.textContent = "Scanning securely on the server...";
+                        statusText.style.background = 'rgba(0,0,0,0.7)';
+                    }, 3000);
+
+                } else if (res.status === 400) {
+                    // Usually means no face, face not recognized, or already marked
+                    if (data.message.includes('already marked')) {
+                        // We do not want to spam "Already marked" logs if they are just standing there,
+                        // so we might optionally log it or just silently fail.
+                        console.log('Already marked');
+                        statusText.textContent = "Standing by...";
+                    } else if (data.message !== 'No face detected in the image') {
+                        statusText.textContent = data.message;
+                        statusText.style.background = 'rgba(0,0,0,0.7)';
+                    }
+                }
+            } catch (err) {
+                console.error('Scan error:', err);
+            } finally {
+                // Short cooldown to prevent spamming the backend
+                setTimeout(() => { isProcessing = false; }, 500);
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

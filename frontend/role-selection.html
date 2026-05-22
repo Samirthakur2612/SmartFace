@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Your Role - SmartFace</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body style="background: radial-gradient(circle at center, var(--bg-dark), #000); display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+    <div class="glass-card" style="max-width: 500px; width: 90%; padding: 3rem; text-align: center;">
+        <img src="/assets/logo.png" alt="SmartFace logo" style="width: 60px; height: 60px; margin-bottom: 1rem;">
+        <h1>Welcome to SmartFace!</h1>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">Choose your role to get started</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <!-- Student Option -->
+            <div class="role-card" onclick="selectRole('student')" style="cursor: pointer; padding: 2rem; border: 2px solid rgba(16, 185, 129, 0.3); border-radius: 12px; transition: all 0.3s; background: rgba(16, 185, 129, 0.05);">
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;">👥</div>
+                <h3 style="margin: 0.5rem 0;">Student</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.4;">
+                    Access leave requests, calendar, and attendance scanning
+                </p>
+            </div>
+
+            <!-- Admin Option -->
+            <div class="role-card" onclick="selectRole('admin')" style="cursor: pointer; padding: 2rem; border: 2px solid rgba(59, 130, 246, 0.3); border-radius: 12px; transition: all 0.3s; background: rgba(59, 130, 246, 0.05);">
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;">⚙️</div>
+                <h3 style="margin: 0.5rem 0;">Admin</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.4;">
+                    Manage students, approve leaves, and view reports
+                </p>
+            </div>
+        </div>
+
+        <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+            <p>Can't decide? Choose <strong>Student</strong> to get started. You can request admin access later.</p>
+        </div>
+
+        <div id="loadingMsg" style="display: none; color: #3B82F6; margin-top: 1rem;">
+            ⏳ Processing your selection...
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        const PUBLISHABLE_KEY = 'pk_test_Y29tcG9zZWQtd2Fib28tODIuY2xlcmsuYWNjb3VudHMuZGV2JA';
+        const script = document.createElement('script');
+        script.src = 'https://composed-wahoo-82.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        script.setAttribute('data-clerk-publishable-key', PUBLISHABLE_KEY);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+
+        script.addEventListener('load', async function () {
+            await window.Clerk.load({
+                signInUrl: 'https://composed-wahoo-82.accounts.dev/sign-in',
+                signUpUrl: 'https://composed-wahoo-82.accounts.dev/sign-up'
+            });
+            
+            if (!window.Clerk.user) {
+                window.location.href = '/';
+            }
+        });
+        document.body.appendChild(script);
+
+        async function selectRole(role) {
+            try {
+                document.getElementById('loadingMsg').style.display = 'block';
+                document.querySelectorAll('.role-card').forEach(el => {
+                    el.style.pointerEvents = 'none';
+                    el.style.opacity = '0.5';
+                });
+
+                const res = await apiFetch('/api/users/select-role', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(`✅ ${data.message}`, 'success');
+                    
+                    // Redirect based on role
+                    if (role === 'student') {
+                        setTimeout(() => window.location.href = '/dashboard', 1500);
+                    } else {
+                        setTimeout(() => window.location.href = '/admin-approval', 1500);
+                    }
+                } else if (res.status === 202) {
+                    showToast('📋 Admin request submitted! Waiting for approval...', 'success');
+                    setTimeout(() => window.location.href = '/admin-approval', 2000);
+                } else {
+                    showToast(data.message || 'Error selecting role', 'error');
+                    document.getElementById('loadingMsg').style.display = 'none';
+                    document.querySelectorAll('.role-card').forEach(el => {
+                        el.style.pointerEvents = 'auto';
+                        el.style.opacity = '1';
+                    });
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showToast('Error selecting role', 'error');
+                document.getElementById('loadingMsg').style.display = 'none';
+                document.querySelectorAll('.role-card').forEach(el => {
+                    el.style.pointerEvents = 'auto';
+                    el.style.opacity = '1';
+                });
+            }
+        }
+
+        // Add hover effects
+        document.querySelectorAll('.role-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-5px)';
+                card.style.borderColor = card.textContent.includes('Admin') ? 'rgba(59, 130, 246, 0.6)' : 'rgba(16, 185, 129, 0.6)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+                card.style.borderColor = card.textContent.includes('Admin') ? 'rgba(59, 130, 246, 0.3)' : 'rgba(16, 185, 129, 0.3)';
+            });
+        });
+    </script>
+</body>
+
+</html>

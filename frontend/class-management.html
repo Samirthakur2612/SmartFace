@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Management - SmartFace</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .class-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.8rem;
+            margin-top: 0.5rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .class-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .class-table thead {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .class-table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .class-table td {
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .class-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .status-badge.inactive {
+            background: rgba(107, 114, 128, 0.2);
+            color: #9ca3af;
+        }
+
+        .days-badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            font-size: 0.8rem;
+            margin: 0.2rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-small {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit {
+            background: rgba(59, 130, 246, 0.3);
+            color: #3b82f6;
+        }
+
+        .btn-edit:hover {
+            background: rgba(59, 130, 246, 0.5);
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.5);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--bg-color);
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-color);
+        }
+
+        .modal-close {
+            float: right;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .modal-close:hover {
+            color: var(--text-color);
+        }
+
+        @media (max-width: 768px) {
+            .class-form {
+                grid-template-columns: 1fr;
+            }
+
+            .class-table {
+                font-size: 0.9rem;
+            }
+
+            .class-table th,
+            .class-table td {
+                padding: 0.7rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo-container">
+                <img src="/assets/logo.png" alt="SmartFace logo" class="logo-img" />
+                <div class="logo-text">
+                    <h2>SmartFace</h2>
+                    <p>Admin Panel</p>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/dashboard" class="nav-item">View Attendance</a></li>
+                <li><a href="/attendance-records" class="nav-item">Attendance Records</a></li>
+                <li><a href="/attendance-scan" class="nav-item">Attendance Scan</a></li>
+                <li><a href="/register" class="nav-item">Register Student</a></li>
+                <li><a href="/students" class="nav-item">Manage Students</a></li>
+                <li><a href="/add-class" class="nav-item">➕ Add Class</a></li>
+                <li><a href="/class-management" class="nav-item active">📅 Manage Classes</a></li>
+                <li><a href="/leave-management" class="nav-item">Leave Requests</a></li>
+                <li><a href="/leaves-calendar" class="nav-item">Leave Calendar</a></li>
+            </ul>
+            <a href="#" class="nav-item logout-btn" id="logoutBtn">Logout</a>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1>Class Management & Timing</h1>
+            </div>
+
+            <!-- Add Class Form -->
+            <div class="glass-card">
+                <h3>Add New Class</h3>
+                <div class="class-form">
+                    <div class="form-group">
+                        <label for="className">Class Name *</label>
+                        <input type="text" id="className" placeholder="e.g., Mathematics-A, English-B">
+                    </div>
+                    <div class="form-group">
+                        <label for="startTime">Start Time (HH:MM) *</label>
+                        <input type="time" id="startTime">
+                    </div>
+                    <div class="form-group">
+                        <label for="endTime">End Time (HH:MM) *</label>
+                        <input type="time" id="endTime">
+                    </div>
+                    <div class="form-group full">
+                        <label for="description">Description (Optional)</label>
+                        <textarea id="description" placeholder="Add any notes about this class..."></textarea>
+                    </div>
+                    <div class="form-group full">
+                        <label>Active Days (Leave empty for daily class)</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="day-Monday" value="Monday">
+                                <label for="day-Monday">Monday</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="day-Tuesday" value="Tuesday">
+                                <label for="day-Tuesday">Tuesday</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="day-Wednesday" value="Wednesday">
+                                <label for="day-Wednesday">Wednesday</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="day-Thursday" value="Thursday">
+                                <label for="day-Thursday">Thursday</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="day-Friday" value="Friday">
+                                <label for="day-Friday">Friday</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="day-Saturday" value="Saturday">
+                                <label for="day-Saturday">Saturday</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="day-Sunday" value="Sunday">
+                                <label for="day-Sunday">Sunday</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group full">
+                        <button class="btn btn-primary" id="addClassBtn">Add Class</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Classes List -->
+            <div class="glass-card" style="margin-top: 2rem;">
+                <h3>All Classes</h3>
+                <div id="classesContainer" style="overflow-x: auto;">
+                    <table class="class-table">
+                        <thead>
+                            <tr>
+                                <th>Class Name</th>
+                                <th>Timing</th>
+                                <th>Days</th>
+                                <th>Status</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classesTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-muted);">Loading classes...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeEditModal()">&times;</span>
+            <div class="modal-header">Edit Class</div>
+            <div class="class-form">
+                <div class="form-group full">
+                    <label for="editClassName">Class Name</label>
+                    <input type="text" id="editClassName">
+                </div>
+                <div class="form-group">
+                    <label for="editStartTime">Start Time</label>
+                    <input type="time" id="editStartTime">
+                </div>
+                <div class="form-group">
+                    <label for="editEndTime">End Time</label>
+                    <input type="time" id="editEndTime">
+                </div>
+                <div class="form-group full">
+                    <label for="editDescription">Description</label>
+                    <textarea id="editDescription"></textarea>
+                </div>
+                <div class="form-group full">
+                    <label>
+                        <input type="checkbox" id="editIsActive"> Active
+                    </label>
+                </div>
+                <div class="form-group full" style="display: flex; gap: 1rem;">
+                    <button class="btn btn-primary" id="saveEditBtn" style="flex: 1;">Save Changes</button>
+                    <button class="btn btn-danger" onclick="closeEditModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/particles.js"></script>
+    <script>
+        const PUBLISHABLE_KEY = 'pk_test_Y29tcG9zZWQtd2Fob28tODIuY2xlcmsuYWNjb3VudHMuZGV2JA';
+        const script = document.createElement('script');
+        script.src = 'https://composed-wahoo-82.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        script.setAttribute('data-clerk-publishable-key', PUBLISHABLE_KEY);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+
+        script.addEventListener('load', async function () {
+            await window.Clerk.load({
+                signInUrl: 'https://composed-wahoo-82.accounts.dev/sign-in',
+                signUpUrl: 'https://composed-wahoo-82.accounts.dev/sign-up'
+            });
+            if (!window.Clerk.user) {
+                window.Clerk.redirectToSignIn({ returnBackUrl: window.location.href });
+            } else {
+                const user = await requirePageRole('admin');
+                if (user) loadClasses();
+            }
+        });
+        document.body.appendChild(script);
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+
+        let editingClassId = null;
+
+        async function loadClasses() {
+            try {
+                const res = await apiFetch('/api/classes');
+                const classes = await res.json();
+                displayClasses(classes);
+            } catch (err) {
+                console.error('Error loading classes:', err);
+                showToast('Error loading classes', 'error');
+            }
+        }
+
+        function displayClasses(classes) {
+            const tbody = document.getElementById('classesTableBody');
+            
+            if (classes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No classes found. Add one to get started!</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = classes.map(cls => {
+                const daysText = cls.dayOfWeek.length === 0 ? 'Daily' : cls.dayOfWeek.join(', ');
+                const statusBadge = `<span class="status-badge ${!cls.isActive ? 'inactive' : ''}">${cls.isActive ? 'Active' : 'Inactive'}</span>`;
+                
+                return `
+                    <tr>
+                        <td><strong>${cls.className}</strong></td>
+                        <td>${cls.startTime} - ${cls.endTime}</td>
+                        <td>
+                            ${cls.dayOfWeek.map(day => `<span class="days-badge">${day}</span>`).join('')}
+                            ${cls.dayOfWeek.length === 0 ? '<span class="days-badge">Every Day</span>' : ''}
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td>${cls.description || '-'}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-small btn-edit" onclick="openEditModal('${cls._id}')">Edit</button>
+                                <button class="btn-small btn-delete" onclick="deleteClass('${cls._id}')">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('addClassBtn').addEventListener('click', async () => {
+            const className = document.getElementById('className').value.trim();
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const description = document.getElementById('description').value.trim();
+            
+            const days = [];
+            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].forEach(day => {
+                if (document.getElementById(`day-${day}`).checked) {
+                    days.push(day);
+                }
+            });
+
+            if (!className || !startTime || !endTime) {
+                showToast('Please fill in all required fields', 'error');
+                return;
+            }
+
+            try {
+                const res = await apiFetch('/api/classes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        className,
+                        startTime,
+                        endTime,
+                        dayOfWeek: days,
+                        description
+                    })
+                });
+
+                if (res.ok) {
+                    showToast(`✓ Class "${className}" created successfully`, 'success');
+                    document.getElementById('className').value = '';
+                    document.getElementById('startTime').value = '';
+                    document.getElementById('endTime').value = '';
+                    document.getElementById('description').value = '';
+                    document.querySelectorAll('.checkbox-item input[type="checkbox"]').forEach(cb => cb.checked = false);
+                    loadClasses();
+                } else {
+                    const error = await res.json();
+                    showToast(error.message || 'Error creating class', 'error');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showToast('Error creating class', 'error');
+            }
+        });
+
+        async function openEditModal(classId) {
+            try {
+                const res = await apiFetch(`/api/classes/${classId}`);
+                const cls = await res.json();
+                
+                document.getElementById('editClassName').value = cls.className;
+                document.getElementById('editStartTime').value = cls.startTime;
+                document.getElementById('editEndTime').value = cls.endTime;
+                document.getElementById('editDescription').value = cls.description || '';
+                document.getElementById('editIsActive').checked = cls.isActive;
+                
+                editingClassId = classId;
+                document.getElementById('editModal').classList.add('active');
+            } catch (err) {
+                console.error('Error loading class:', err);
+                showToast('Error loading class details', 'error');
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+            editingClassId = null;
+        }
+
+        document.getElementById('saveEditBtn').addEventListener('click', async () => {
+            if (!editingClassId) return;
+
+            const className = document.getElementById('editClassName').value.trim();
+            const startTime = document.getElementById('editStartTime').value;
+            const endTime = document.getElementById('editEndTime').value;
+            const description = document.getElementById('editDescription').value.trim();
+            const isActive = document.getElementById('editIsActive').checked;
+
+            try {
+                const res = await apiFetch(`/api/classes/${editingClassId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        className,
+                        startTime,
+                        endTime,
+                        description,
+                        isActive
+                    })
+                });
+
+                if (res.ok) {
+                    showToast('✓ Class updated successfully', 'success');
+                    closeEditModal();
+                    loadClasses();
+                } else {
+                    const error = await res.json();
+                    showToast(error.message || 'Error updating class', 'error');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showToast('Error updating class', 'error');
+            }
+        });
+
+        async function deleteClass(classId) {
+            if (!confirm('Are you sure you want to delete this class?')) return;
+
+            try {
+                const res = await apiFetch(`/api/classes/${classId}`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    showToast('✓ Class deleted successfully', 'success');
+                    loadClasses();
+                } else {
+                    const error = await res.json();
+                    showToast(error.message || 'Error deleting class', 'error');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showToast('Error deleting class', 'error');
+            }
+        }
+
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('editModal');
+            if (e.target === modal) {
+                closeEditModal();
+            }
+        });
+    </script>
+</body>
+
+</html>

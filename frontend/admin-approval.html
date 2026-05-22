@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Approval - SmartFace</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body style="background: radial-gradient(circle at center, var(--bg-dark), #000); display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+    <div class="glass-card" style="max-width: 480px; width: 90%; padding: 2.5rem; text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
+        <h1>Admin Approval Pending</h1>
+        <p style="color: var(--text-muted); line-height: 1.5;">
+            Your admin access request was submitted. An existing admin must approve your account before you can access the dashboard.
+        </p>
+        <p id="userEmail" style="margin-top: 1rem; color: var(--primary-light);"></p>
+        <button class="btn btn-primary" style="margin-top: 1.5rem;" onclick="checkStatus()">Check Status</button>
+        <a href="#" id="logoutBtn" style="display: block; margin-top: 1rem; color: var(--text-muted);">Logout</a>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        const PUBLISHABLE_KEY = 'pk_test_Y29tcG9zZWQtd2Fob28tODIuY2xlcmsuYWNjb3VudHMuZGV2JA';
+        const script = document.createElement('script');
+        script.src = 'https://composed-wahoo-82.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        script.setAttribute('data-clerk-publishable-key', PUBLISHABLE_KEY);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+
+        script.addEventListener('load', async function () {
+            await window.Clerk.load();
+            if (!window.Clerk.user) {
+                navigateTo('/');
+                return;
+            }
+            const user = await ensureDbUser();
+            if (user?.role === 'admin') {
+                navigateTo('/dashboard');
+            } else if (user?.role === 'student') {
+                navigateTo(getHomePathForUser(user));
+            } else if (user) {
+                document.getElementById('userEmail').textContent = user.email;
+            }
+        });
+        document.body.appendChild(script);
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+
+        async function checkStatus() {
+            const user = await fetchCurrentUser();
+            if (user?.role === 'admin') {
+                showToast('Approved! Redirecting...', 'success');
+                navigateTo('/dashboard');
+            } else {
+                showToast('Still waiting for admin approval', 'warning');
+            }
+        }
+    </script>
+</body>
+
+</html>

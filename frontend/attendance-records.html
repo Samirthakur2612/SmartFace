@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Records - SmartFace</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo-container">
+                <img src="/assets/logo.png" alt="SmartFace logo" class="logo-img" />
+                <div class="logo-text">
+                    <h2>SmartFace</h2>
+                    <p>Admin Panel</p>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/dashboard" class="nav-item">Dashboard</a></li>
+                <li><a href="/attendance-records" class="nav-item active">Attendance Records</a></li>
+                <li><a href="/attendance-scan" class="nav-item">Attendance Scan</a></li>
+                <li><a href="/register" class="nav-item">Register Student</a></li>
+                <li><a href="/students" class="nav-item">Manage Students</a></li>
+                <li><a href="/add-class" class="nav-item">➕ Add Class</a></li>
+                <li><a href="/class-management" class="nav-item">📅 Manage Classes</a></li>
+                <li><a href="/leave-management" class="nav-item">Leave Requests</a></li>
+            </ul>
+            <a href="#" class="nav-item logout-btn" id="logoutBtn">Logout</a>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1>Attendance Records</h1>
+                <p>View and manage student attendance with leave tracking</p>
+            </div>
+
+            <!-- Filters -->
+            <div class="glass-card" style="margin-bottom: 2rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div>
+                        <label style="color: var(--text-muted); font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Date Range</label>
+                        <input type="date" id="startDate" style="width: 100%; padding: 0.7rem; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); border-radius: 8px; color: var(--text-primary);">
+                    </div>
+                    <div>
+                        <label style="color: var(--text-muted); font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">To Date</label>
+                        <input type="date" id="endDate" style="width: 100%; padding: 0.7rem; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); border-radius: 8px; color: var(--text-primary);">
+                    </div>
+                    <div>
+                        <label style="color: var(--text-muted); font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Filter by Status</label>
+                        <select id="statusFilter" style="width: 100%; padding: 0.7rem; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); border-radius: 8px; color: var(--text-primary);">
+                            <option value="">All Statuses</option>
+                            <option value="present">✅ Present</option>
+                            <option value="absent">❌ Absent</option>
+                            <option value="leave">📋 On Leave</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="color: var(--text-muted); font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Search Student</label>
+                        <input type="text" id="searchStudent" placeholder="Name or ID" style="width: 100%; padding: 0.7rem; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); border-radius: 8px; color: var(--text-primary);">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="applyFilters()">🔍 Search</button>
+                    <button class="btn" style="background: rgba(255,255,255,0.1);" onclick="resetFilters()">↻ Reset</button>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                <div class="glass-card" style="text-align: center; padding: 1.5rem;">
+                    <div style="font-size: 2rem;">✅</div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">Present Today</div>
+                    <div style="font-size: 1.8rem; font-weight: 600; color: #10B981;" id="presentCount">0</div>
+                </div>
+                <div class="glass-card" style="text-align: center; padding: 1.5rem;">
+                    <div style="font-size: 2rem;">❌</div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">Absent Today</div>
+                    <div style="font-size: 1.8rem; font-weight: 600; color: #EF4444;" id="absentCount">0</div>
+                </div>
+                <div class="glass-card" style="text-align: center; padding: 1.5rem;">
+                    <div style="font-size: 2rem;">📋</div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">On Leave Today</div>
+                    <div style="font-size: 1.8rem; font-weight: 600; color: #3B82F6;" id="leaveCount">0</div>
+                </div>
+                <div class="glass-card" style="text-align: center; padding: 1.5rem;">
+                    <div style="font-size: 2rem;">👥</div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">Total Records</div>
+                    <div style="font-size: 1.8rem; font-weight: 600;" id="totalCount">0</div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="glass-card">
+                <h3>📊 Attendance Data</h3>
+                <div style="overflow-x: auto; margin-top: 1rem;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid rgba(255,255,255,0.1);">
+                                <th style="padding: 1rem; text-align: left;">Student Name</th>
+                                <th style="padding: 1rem; text-align: left;">Student ID</th>
+                                <th style="padding: 1rem; text-align: center;">Date</th>
+                                <th style="padding: 1rem; text-align: center;">Time</th>
+                                <th style="padding: 1rem; text-align: center;">Status</th>
+                                <th style="padding: 1rem; text-align: center;">Confidence</th>
+                                <th style="padding: 1rem; text-align: center;">Emotion</th>
+                                <th style="padding: 1rem; text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                    Loading...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 2rem;">
+                <button class="btn" onclick="previousPage()" id="prevBtn">← Previous</button>
+                <span id="pageInfo" style="color: var(--text-muted);">Page 1</span>
+                <button class="btn" onclick="nextPage()" id="nextBtn">Next →</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Status Modal -->
+    <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div class="glass-card" style="max-width: 400px; width: 90%;">
+            <h3>📝 Update Attendance Status</h3>
+            <div style="margin: 1.5rem 0;">
+                <label style="color: var(--text-primary); display: block; margin-bottom: 0.5rem;">Change Status To:</label>
+                <select id="newStatus" style="width: 100%; padding: 0.7rem; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); border-radius: 8px; color: var(--text-primary);">
+                    <option value="present">✅ Present</option>
+                    <option value="absent">❌ Absent</option>
+                    <option value="leave">📋 On Leave</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button class="btn" onclick="closeEditModal()" style="background: rgba(255,255,255,0.1);">Cancel</button>
+                <button class="btn btn-primary" onclick="saveStatusChange()">💾 Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        const PUBLISHABLE_KEY = 'pk_test_Y29tcG9zZWQtd2Fib28tODIuY2xlcmsuYWNjb3VudHMuZGV2JA';
+        const script = document.createElement('script');
+        script.src = 'https://composed-wahoo-82.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        script.setAttribute('data-clerk-publishable-key', PUBLISHABLE_KEY);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+
+        script.addEventListener('load', async function () {
+            await window.Clerk.load({
+                signInUrl: 'https://composed-wahoo-82.accounts.dev/sign-in',
+                signUpUrl: 'https://composed-wahoo-82.accounts.dev/sign-up'
+            });
+            if (!window.Clerk.user) {
+                window.Clerk.redirectToSignIn({ returnBackUrl: window.location.href });
+            } else {
+                const user = await requirePageRole('admin');
+                if (user) {
+                    loadAttendanceRecords();
+                    setInterval(loadAttendanceRecords, 30000);
+                }
+            }
+        });
+        document.body.appendChild(script);
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+
+        let allRecords = [];
+        let currentPage = 1;
+        const recordsPerPage = 25;
+        let currentEditId = null;
+
+        // Load attendance records
+        async function loadAttendanceRecords() {
+            try {
+                const res = await apiFetch('/api/attendance');
+                const records = await res.json();
+                allRecords = records;
+                updateStatistics();
+                displayRecords();
+            } catch (err) {
+                console.error('Error:', err);
+                showToast('Failed to load attendance records', 'error');
+            }
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const today = new Date().toISOString().split('T')[0];
+            const todayRecords = allRecords.filter(r => r.date === today);
+
+            const present = todayRecords.filter(r => r.status === 'present').length;
+            const absent = todayRecords.filter(r => r.status === 'absent').length;
+            const leave = todayRecords.filter(r => r.status === 'leave').length;
+
+            document.getElementById('presentCount').textContent = present;
+            document.getElementById('absentCount').textContent = absent;
+            document.getElementById('leaveCount').textContent = leave;
+            document.getElementById('totalCount').textContent = allRecords.length;
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const status = document.getElementById('statusFilter').value;
+            const search = document.getElementById('searchStudent').value.toLowerCase();
+
+            let filtered = allRecords;
+
+            if (startDate) {
+                filtered = filtered.filter(r => r.date >= startDate);
+            }
+            if (endDate) {
+                filtered = filtered.filter(r => r.date <= endDate);
+            }
+            if (status) {
+                filtered = filtered.filter(r => r.status === status);
+            }
+            if (search) {
+                filtered = filtered.filter(r =>
+                    r.name.toLowerCase().includes(search) ||
+                    r.studentId.toLowerCase().includes(search)
+                );
+            }
+
+            allRecords = filtered;
+            currentPage = 1;
+            displayRecords();
+        }
+
+        // Reset filters
+        function resetFilters() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('searchStudent').value = '';
+            loadAttendanceRecords();
+        }
+
+        // Display records with pagination
+        function displayRecords() {
+            const start = (currentPage - 1) * recordsPerPage;
+            const end = start + recordsPerPage;
+            const pageRecords = allRecords.slice(start, end);
+
+            if (pageRecords.length === 0) {
+                document.getElementById('attendanceTableBody').innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">No records found</td></tr>';
+                document.getElementById('pageInfo').textContent = `No records`;
+                return;
+            }
+
+            const html = pageRecords.map(record => {
+                const statusEmoji = record.status === 'present' ? '✅' : record.status === 'absent' ? '❌' : '📋';
+                const statusColor = record.status === 'present' ? '#10B981' : record.status === 'absent' ? '#EF4444' : '#3B82F6';
+                const dateObj = new Date(record.date);
+                const time = record.time || '--:--';
+
+                return `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 1rem;">${record.name}</td>
+                        <td style="padding: 1rem; color: var(--text-muted); font-size: 0.9rem;">${record.studentId}</td>
+                        <td style="padding: 1rem; text-align: center;">${dateObj.toLocaleDateString()}</td>
+                        <td style="padding: 1rem; text-align: center;">${time}</td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <span style="color: ${statusColor}; font-weight: 600;">${statusEmoji} ${record.status.toUpperCase()}</span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.9rem;">
+                            ${record.confidence ? (record.confidence * 100).toFixed(0) + '%' : 'N/A'}
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            ${record.emotion || '😐'}
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <button class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: rgba(59, 130, 246, 0.2); color: #3B82F6;" onclick="openEditModal('${record._id}')">✏️ Edit</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('attendanceTableBody').innerHTML = html;
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${Math.ceil(allRecords.length / recordsPerPage)}`;
+
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === Math.ceil(allRecords.length / recordsPerPage);
+        }
+
+        // Pagination
+        function nextPage() {
+            const maxPages = Math.ceil(allRecords.length / recordsPerPage);
+            if (currentPage < maxPages) {
+                currentPage++;
+                displayRecords();
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                displayRecords();
+                window.scrollTo(0, 0);
+            }
+        }
+
+        // Modal functions
+        function openEditModal(recordId) {
+            currentEditId = recordId;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            currentEditId = null;
+        }
+
+        async function saveStatusChange() {
+            const newStatus = document.getElementById('newStatus').value;
+
+            try {
+                const res = await apiFetch(`/api/attendance/${currentEditId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (res.ok) {
+                    showToast('✅ Attendance status updated!', 'success');
+                    closeEditModal();
+                    loadAttendanceRecords();
+                } else {
+                    showToast('Failed to update status', 'error');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showToast('Error updating status', 'error');
+            }
+        }
+
+        // Close modal on background click
+        document.getElementById('editModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('editModal')) {
+                closeEditModal();
+            }
+        });
+
+    </script>
+</body>
+
+</html>

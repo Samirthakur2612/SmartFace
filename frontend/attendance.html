@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartFace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/face-api.min.js"></script>
+    <style>
+        .kiosk-body {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center, var(--bg-dark), #000);
+        }
+
+        .header-center {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header-center h1 {
+            font-size: 3rem;
+            background: -webkit-linear-gradient(#fff, var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-center p {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        .recent-attendance {
+            margin-top: 2rem;
+            width: 100%;
+            max-width: 640px;
+            background: var(--bg-card);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .recent-attendance h3 {
+            margin-bottom: 1rem;
+            color: var(--primary-light);
+        }
+
+        .log-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .log-item:last-child {
+            border: none;
+        }
+    </style>
+</head>
+
+<body class="kiosk-body">
+
+    <div class="header-center">
+        <img src="/assets/logo.png" alt="SmartFace logo" class="app-logo" />
+        <h1>Face Recognition Attendance</h1>
+        <p>Please look at the camera to mark your attendance</p>
+    </div>
+
+    <div class="glass-card camera-panel" style="padding: 1rem;">
+        <div class="camera-container" style="box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);">
+            <video id="video" autoplay muted playsinline></video>
+            <canvas id="overlay"></canvas>
+            <div id="statusText" class="status-overlay">Loading AI Models...</div>
+        </div>
+    </div>
+
+    <div class="recent-attendance">
+        <h3>Recent Scans Today</h3>
+        <div id="logsContainer">
+            <div style="color: var(--text-muted); text-align: center;">No recent scans.</div>
+        </div>
+    </div>
+
+    <div style="margin-top:20px;">
+        <a href="/" style="color: var(--text-muted); text-decoration: none; font-size:0.9rem;">Admin Login</a>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        const video = document.getElementById('video');
+        const overlay = document.getElementById('overlay');
+        const statusText = document.getElementById('statusText');
+        const logsContainer = document.getElementById('logsContainer');
+
+        // Configuration
+        const RECOGNITION_THRESHOLD = 0.5; // lower is stricter (0.0 to 1.0)
+        let labeledFaceDescriptors = [];
+        let faceMatcher = null;
+        let isProcessing = false;
+        let lastMarkedStudent = { id: null, time: 0 };
+        const COOLDOWN_MS = 5000; // prevent spamming the same face
+
+        async function init() {
+            try {
+                // 1. Load Models
+                await Promise.all([
+                    faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+                    faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+                    faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+                ]);
+
+                statusText.textContent = "Fetching Enrolled Students...";
+
+                // 2. Fetch Known Descriptors
+                const res = await fetch('/api/students');
+                const students = await res.json();
+
+                if (students.length === 0) {
+                    statusText.textContent = "No students registered yet! All faces will be Unknown.";
+                    statusText.style.background = 'rgba(239,68,68,0.7)';
+                    // We don't return here so the camera can still start
+                } else {
+                    labeledFaceDescriptors = students.map(s => {
+                        const desc = new Float32Array(s.faceDescriptor);
+                        // LabeledFaceDescriptors expects an array of descriptors per person
+                        return new faceapi.LabeledFaceDescriptors(s.studentId + '|' + s.name, [desc]);
+                    });
+
+                    faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6); // 0.6 is max descriptor distance
+                }
+
+                // 3. Start Video
+                startVideo();
+            } catch (err) {
+                console.error(err);
+                statusText.textContent = "Error initializing AI";
+            }
+        }
+
+        function startVideo() {
+            statusText.textContent = "Starting Camera...";
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+                .then(stream => {
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    console.error(err);
+                    const name = err && err.name ? err.name : 'CameraError';
+                    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                        statusText.textContent = 'Camera permission blocked. Click the lock icon → Site settings → Allow Camera, then refresh.';
+                    } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+                        statusText.textContent = 'No camera found. Plug in/enable a webcam and refresh.';
+                    } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+                        statusText.textContent = 'Camera is busy (used by another app like Zoom/Teams). Close it and refresh.';
+                    } else if (name === 'NotSecureError') {
+                        statusText.textContent = 'Camera requires secure context. Use http://localhost:5000 (not a file path or IP).';
+                    } else {
+                        statusText.textContent = `Camera error: ${name}. Try allowing permission and refreshing.`;
+                    }
+                    statusText.style.background = 'rgba(239, 68, 68, 0.7)';
+                });
+        }
+
+        video.addEventListener('play', () => {
+            statusText.textContent = "Scanning faces...";
+            const displaySize = { width: video.width || 640, height: video.height || 480 };
+            faceapi.matchDimensions(overlay, displaySize);
+
+            // We use requestAnimationFrame conceptually through intervals to not block the main thread completely
+            setInterval(async () => {
+                if (video.paused || video.ended || isProcessing || !faceMatcher) return;
+
+                const detections = await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceDescriptors();
+                const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
+                const ctx = overlay.getContext('2d');
+                ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+                if (detections.length === 0) {
+                    statusText.textContent = "Waiting for face...";
+                    statusText.style.background = 'rgba(0,0,0,0.7)';
+                    return;
+                }
+
+                // Recognize faces in current frame
+                let results = [];
+                if (faceMatcher) {
+                    results = resizedDetections.map(d => faceMatcher.findBestMatch(d.descriptor));
+                }
+
+                resizedDetections.forEach((detection, i) => {
+                    const box = detection.detection.box;
+                    let color = '#EF4444'; // Red for unknown
+                    let text = 'Unknown Person';
+
+                    if (faceMatcher && results[i]) {
+                        const result = results[i];
+                        // Distance closer to 0 is better. We set threshold to 0.5 (stricter than default 0.6)
+                        if (result.label !== 'unknown' && result.distance < RECOGNITION_THRESHOLD) {
+                            color = '#10B981'; // Green for known
+
+                            const [studentId, name] = result.label.split('|');
+                            const confidence = (1 - result.distance).toFixed(2);
+                            text = `${name} (${confidence})`;
+
+                            // Attempt to mark attendance if cooldown passed
+                            const now = Date.now();
+                            if (lastMarkedStudent.id !== studentId || (now - lastMarkedStudent.time > COOLDOWN_MS)) {
+                                markAttendance(studentId, name);
+                                lastMarkedStudent = { id: studentId, time: now };
+                            }
+                        }
+                    }
+
+                    // Draw Box (Now outside the if blocks so it draws for unknown faces too!)
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+                    // Draw Text
+                    ctx.fillStyle = color;
+                    ctx.font = '16px Outfit';
+
+                    // Draw a background for the text
+                    ctx.fillRect(box.x, box.y - 25, ctx.measureText(text).width + 10, 25);
+
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText(text, box.x + 5, box.y - 5);
+                });
+
+            }, 200); // 5 FPS
+        });
+
+        async function markAttendance(studentId, name) {
+            isProcessing = true;
+            statusText.textContent = `Recognized: ${name}... Marking`;
+            statusText.style.background = 'rgba(16, 185, 129, 0.7)';
+
+            try {
+                const res = await fetch('/api/attendance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ studentId, name })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(`Attendance marked for ${name}!`, 'success');
+                    addLog(name, "Marked Present");
+                } else if (res.status === 400 && data.message.includes('already marked')) {
+                    statusText.textContent = `${name} - Already Marked Today`;
+                    statusText.style.background = 'rgba(55, 48, 163, 0.7)'; // Blueish indicating info
+                } else {
+                    showToast('Failed to mark', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setTimeout(() => { isProcessing = false; }, 1000); // Give it a sec before next scan lock
+            }
+        }
+
+        function addLog(name, status) {
+            const emptyMsg = logsContainer.querySelector('div[style*="text-align: center"]');
+            if (emptyMsg) emptyMsg.remove();
+
+            const time = new Date().toLocaleTimeString();
+            const logItem = document.createElement('div');
+            logItem.className = 'log-item';
+            logItem.innerHTML = `<span><strong>${name}</strong></span> 
+                                 <span style="color: var(--secondary-color)">${status} at ${time}</span>`;
+
+            logsContainer.prepend(logItem); // Add to top
+
+            // Keep only latest 5
+            if (logsContainer.children.length > 5) {
+                logsContainer.lastChild.remove();
+            }
+        }
+
+        // Boot
+        init();
+    </script>
+</body>
+
+</html>

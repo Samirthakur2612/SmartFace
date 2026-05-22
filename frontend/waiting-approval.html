@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waiting for Approval - SmartFace</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body style="background: radial-gradient(circle at center, var(--bg-dark), #000); display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+    <div class="glass-card" style="max-width: 520px; width: 90%; padding: 2.5rem; text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📧</div>
+        <h1 id="pageTitle">Waiting for Approval</h1>
+        <p id="pageMessage" style="color: var(--text-muted); line-height: 1.6;">
+            Your login request was sent to <strong>samirthakur829@gmail.com</strong>.
+            You can sign in only after it is approved.
+        </p>
+        <p id="userDetails" style="margin-top: 1rem; color: var(--primary-light); font-size: 0.95rem;"></p>
+        <button class="btn btn-primary" style="margin-top: 1.5rem;" onclick="checkStatus()">Check if Approved</button>
+        <a href="#" id="logoutBtn" style="display: block; margin-top: 1rem; color: var(--text-muted);">Logout</a>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        const PUBLISHABLE_KEY = 'pk_test_Y29tcG9zZWQtd2Fob28tODIuY2xlcmsuYWNjb3VudHMuZGV2JA';
+        const script = document.createElement('script');
+        script.src = 'https://composed-wahoo-82.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        script.setAttribute('data-clerk-publishable-key', PUBLISHABLE_KEY);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+
+        script.addEventListener('load', async function () {
+            await window.Clerk.load();
+            if (!window.Clerk.user) {
+                navigateTo('/');
+                return;
+            }
+            const user = await fetchCurrentUser();
+            if (user && userCanAccess(user)) {
+                const home = getHomePathForUser(user);
+                if (home && home !== '/waiting-approval' && home !== '/') {
+                    navigateTo(home);
+                }
+                return;
+            }
+            if (user) {
+                const role = user.requestedRole === 'admin' ? 'Admin' : 'Student';
+                document.getElementById('userDetails').textContent =
+                    `${user.name} · ${user.email} · Requested: ${role}`;
+                if (user.approvalStatus === 'rejected') {
+                    document.getElementById('pageTitle').textContent = 'Access Denied';
+                    document.getElementById('pageMessage').textContent =
+                        user.rejectionReason || 'Your request was rejected. Contact samirthakur829@gmail.com.';
+                }
+            }
+        });
+        document.body.appendChild(script);
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+
+        async function checkStatus() {
+            const user = await fetchCurrentUser();
+            if (user && userCanAccess(user)) {
+                showToast('Approved! Redirecting...', 'success');
+                const home = getHomePathForUser(user);
+                if (home) navigateTo(home);
+            } else if (user?.approvalStatus === 'rejected') {
+                showToast('Your request was rejected', 'error');
+            } else {
+                showToast('Still waiting — check samirthakur829@gmail.com', 'warning');
+            }
+        }
+    </script>
+</body>
+
+</html>

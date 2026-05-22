@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Calendar - SmartFace</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo-container">
+                <img src="/assets/logo.png" alt="SmartFace logo" class="logo-img" />
+                <div class="logo-text">
+                    <h2>SmartFace</h2>
+                    <p>Leave Calendar</p>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/dashboard" class="nav-item">View Attendance</a></li>
+                <li><a href="/attendance-scan" class="nav-item">Attendance Scan</a></li>
+                <li><a href="/register" class="nav-item">Register Student</a></li>
+                <li><a href="/students" class="nav-item">Manage Students</a></li>
+                <li><a href="/add-class" class="nav-item">➕ Add Class</a></li>
+                <li><a href="/class-management" class="nav-item">📅 Manage Classes</a></li>
+                <li><a href="/leave-management" class="nav-item">Leave Requests</a></li>
+                <li><a href="/leaves-calendar" class="nav-item active">Leave Calendar</a></li>
+            </ul>
+            <a href="#" class="nav-item logout-btn" id="logoutBtn">Logout</a>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1>Leave Calendar</h1>
+                <p>View all approved leaves in calendar format</p>
+            </div>
+
+            <!-- Summary Cards -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                <div class="glass-card" style="text-align: center; padding: 1.5rem;">
+                    <div style="font-size: 2rem;">📅</div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">Month</div>
+                    <div style="font-size: 1.4rem; font-weight: 600;" id="monthDisplay"></div>
+                </div>
+                <div class="glass-card" style="text-align: center; padding: 1.5rem;">
+                    <div style="font-size: 2rem;">📋</div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">Total Leaves</div>
+                    <div style="font-size: 1.8rem; font-weight: 600; color: #3B82F6;" id="totalLeavesCount">0</div>
+                </div>
+                <div class="glass-card" style="text-align: center; padding: 1.5rem;">
+                    <div style="font-size: 2rem;">👥</div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">Students on Leave</div>
+                    <div style="font-size: 1.8rem; font-weight: 600; color: #10B981;" id="studentsOnLeaveCount">0</div>
+                </div>
+                <div class="glass-card" style="text-align: center; padding: 1.5rem;">
+                    <div style="font-size: 2rem;">📊</div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">Total Days</div>
+                    <div style="font-size: 1.8rem; font-weight: 600; color: #F59E0B;" id="totalDaysCount">0</div>
+                </div>
+            </div>
+
+            <!-- Month Navigation -->
+            <div class="glass-card" style="margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <button class="btn" onclick="previousMonth()">← Previous</button>
+                    <h2 id="calendarTitle" style="margin: 0; font-weight: 600;"></h2>
+                    <button class="btn" onclick="nextMonth()">Next →</button>
+                </div>
+
+                <!-- Calendar -->
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: rgba(255,255,255,0.05); border-bottom: 2px solid rgba(255,255,255,0.1);">
+                                <th style="padding: 1rem; text-align: center;">Sun</th>
+                                <th style="padding: 1rem; text-align: center;">Mon</th>
+                                <th style="padding: 1rem; text-align: center;">Tue</th>
+                                <th style="padding: 1rem; text-align: center;">Wed</th>
+                                <th style="padding: 1rem; text-align: center;">Thu</th>
+                                <th style="padding: 1rem; text-align: center;">Fri</th>
+                                <th style="padding: 1rem; text-align: center;">Sat</th>
+                            </tr>
+                        </thead>
+                        <tbody id="calendarBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Leave Types Statistics -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                <div class="glass-card">
+                    <h3>🤒 Sick Leaves</h3>
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Count:</span>
+                            <strong id="sickCount">0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Total Days:</span>
+                            <strong id="sickDays">0</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-card">
+                    <h3>😊 Casual Leaves</h3>
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Count:</span>
+                            <strong id="casualCount">0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Total Days:</span>
+                            <strong id="casualDays">0</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-card">
+                    <h3>👨‍👩‍👧 Family Emergency</h3>
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Count:</span>
+                            <strong id="familyCount">0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>Total Days:</span>
+                            <strong id="familyDays">0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student Leave Details -->
+            <div class="glass-card">
+                <h3>👥 Student-wise Leave Summary</h3>
+                <div style="overflow-x: auto; margin-top: 1rem;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid rgba(255,255,255,0.1);">
+                                <th style="padding: 1rem; text-align: left;">Student Name</th>
+                                <th style="padding: 1rem; text-align: left;">Total Leaves</th>
+                                <th style="padding: 1rem; text-align: center;">Sick</th>
+                                <th style="padding: 1rem; text-align: center;">Casual</th>
+                                <th style="padding: 1rem; text-align: center;">Family</th>
+                                <th style="padding: 1rem; text-align: center;">Days</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentSummaryBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                    Loading...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Day Details Modal -->
+    <div id="dayModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div class="glass-card" style="max-width: 500px; width: 90%;">
+            <h3 id="dayModalTitle"></h3>
+            <div id="dayModalContent" style="margin: 1.5rem 0; max-height: 400px; overflow-y: auto;"></div>
+            <button class="btn btn-primary" onclick="closeDayModal()" style="width: 100%;">Close</button>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        const PUBLISHABLE_KEY = 'pk_test_Y29tcG9zZWQtd2Fib28tODIuY2xlcmsuYWNjb3VudHMuZGV2JA';
+        const script = document.createElement('script');
+        script.src = 'https://composed-wahoo-82.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        script.setAttribute('data-clerk-publishable-key', PUBLISHABLE_KEY);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+
+        script.addEventListener('load', async function () {
+            await window.Clerk.load({
+                signInUrl: 'https://composed-wahoo-82.accounts.dev/sign-in',
+                signUpUrl: 'https://composed-wahoo-82.accounts.dev/sign-up'
+            });
+            if (!window.Clerk.user) {
+                window.Clerk.redirectToSignIn({ returnBackUrl: window.location.href });
+            } else {
+                const user = await requirePageRole('admin');
+                if (user) loadLeaves();
+            }
+        });
+        document.body.appendChild(script);
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+
+        let allLeaves = [];
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+
+        // Load all leaves
+        async function loadLeaves() {
+            try {
+                const res = await apiFetch('/api/leaves/admin/all');
+                allLeaves = await res.json();
+                updateStatistics();
+                renderCalendar();
+                renderStudentSummary();
+            } catch (err) {
+                console.error('Error:', err);
+                showToast('Failed to load leave data', 'error');
+            }
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const approvedLeaves = allLeaves.filter(l => l.status === 'approved');
+            const students = new Set(approvedLeaves.map(l => l.studentId));
+            const totalDays = approvedLeaves.reduce((sum, l) => sum + l.numberOfDays, 0);
+
+            const sickLeaves = approvedLeaves.filter(l => l.leaveType === 'sick');
+            const casualLeaves = approvedLeaves.filter(l => l.leaveType === 'casual');
+            const familyLeaves = approvedLeaves.filter(l => l.leaveType === 'familyEmergency');
+
+            document.getElementById('monthDisplay').textContent = new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            document.getElementById('totalLeavesCount').textContent = approvedLeaves.length;
+            document.getElementById('studentsOnLeaveCount').textContent = students.size;
+            document.getElementById('totalDaysCount').textContent = totalDays;
+
+            document.getElementById('sickCount').textContent = sickLeaves.length;
+            document.getElementById('sickDays').textContent = sickLeaves.reduce((sum, l) => sum + l.numberOfDays, 0);
+            document.getElementById('casualCount').textContent = casualLeaves.length;
+            document.getElementById('casualDays').textContent = casualLeaves.reduce((sum, l) => sum + l.numberOfDays, 0);
+            document.getElementById('familyCount').textContent = familyLeaves.length;
+            document.getElementById('familyDays').textContent = familyLeaves.reduce((sum, l) => sum + l.numberOfDays, 0);
+        }
+
+        // Render calendar
+        function renderCalendar() {
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+            const prevLastDay = new Date(currentYear, currentMonth, 0);
+
+            const calendarTitle = document.getElementById('calendarTitle');
+            calendarTitle.textContent = new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            const calendarBody = document.getElementById('calendarBody');
+            calendarBody.innerHTML = '';
+
+            // Days from previous month
+            for (let i = prevLastDay.getDate() - firstDay.getDay() + 1; i <= prevLastDay.getDate(); i++) {
+                const row = calendarBody.insertRow();
+                const cell = row.insertCell();
+                cell.textContent = i;
+                cell.style.color = 'var(--text-muted)';
+                cell.style.padding = '1rem';
+                cell.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                cell.style.minHeight = '80px';
+            }
+
+            // Days of current month
+            let date = 1;
+            while (date <= lastDay.getDate()) {
+                const row = calendarBody.insertRow();
+                for (let i = 0; i < 7; i++) {
+                    if (i === 0 && date === 1 && firstDay.getDay() !== 0) {
+                        // Fill empty cells
+                    }
+                    if (date <= lastDay.getDate()) {
+                        const cell = row.insertCell();
+                        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+                        const leavesOnDate = allLeaves.filter(l => 
+                            l.status === 'approved' && 
+                            dateStr >= l.startDate && 
+                            dateStr <= l.endDate
+                        );
+
+                        cell.innerHTML = `<strong>${date}</strong>`;
+                        if (leavesOnDate.length > 0) {
+                            cell.innerHTML += `<div style="font-size: 0.75rem; margin-top: 0.3rem; color: #3B82F6;">📋 ${leavesOnDate.length}</div>`;
+                            cell.style.background = 'rgba(59, 130, 246, 0.1)';
+                            cell.style.cursor = 'pointer';
+                            cell.addEventListener('click', () => showDayDetails(dateStr, leavesOnDate));
+                        }
+                        cell.style.padding = '0.8rem';
+                        cell.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                        cell.style.minHeight = '80px';
+                        cell.style.verticalAlign = 'top';
+                        date++;
+                    }
+                }
+            }
+
+            // Days from next month
+            for (let i = 1; i <= (7 * 6 - (lastDay.getDate() + firstDay.getDay())); i++) {
+                const row = calendarBody.insertRow();
+                const cell = row.insertCell();
+                cell.textContent = i;
+                cell.style.color = 'var(--text-muted)';
+                cell.style.padding = '1rem';
+                cell.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                cell.style.minHeight = '80px';
+            }
+        }
+
+        // Render student summary
+        function renderStudentSummary() {
+            const approvedLeaves = allLeaves.filter(l => l.status === 'approved');
+            const studentMap = {};
+
+            approvedLeaves.forEach(leave => {
+                if (!studentMap[leave.studentId]) {
+                    studentMap[leave.studentId] = {
+                        name: leave.name,
+                        total: 0,
+                        sick: 0,
+                        casual: 0,
+                        family: 0,
+                        days: 0
+                    };
+                }
+                studentMap[leave.studentId].total++;
+                studentMap[leave.studentId][leave.leaveType === 'sick' ? 'sick' : leave.leaveType === 'casual' ? 'casual' : 'family']++;
+                studentMap[leave.studentId].days += leave.numberOfDays;
+            });
+
+            const html = Object.values(studentMap).map(student => `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 1rem;">${student.name}</td>
+                    <td style="padding: 1rem;"><strong>${student.total}</strong></td>
+                    <td style="padding: 1rem; text-align: center;">${student.sick}</td>
+                    <td style="padding: 1rem; text-align: center;">${student.casual}</td>
+                    <td style="padding: 1rem; text-align: center;">${student.family}</td>
+                    <td style="padding: 1rem; text-align: center;"><strong>${student.days}</strong></td>
+                </tr>
+            `).join('');
+
+            document.getElementById('studentSummaryBody').innerHTML = html || '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">No approved leaves</td></tr>';
+        }
+
+        // Month navigation
+        function previousMonth() {
+            if (currentMonth === 0) {
+                currentMonth = 11;
+                currentYear--;
+            } else {
+                currentMonth--;
+            }
+            renderCalendar();
+            updateStatistics();
+        }
+
+        function nextMonth() {
+            if (currentMonth === 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else {
+                currentMonth++;
+            }
+            renderCalendar();
+            updateStatistics();
+        }
+
+        // Day details modal
+        function showDayDetails(dateStr, leaves) {
+            const modal = document.getElementById('dayModal');
+            const title = document.getElementById('dayModalTitle');
+            const content = document.getElementById('dayModalContent');
+
+            const dateObj = new Date(dateStr);
+            title.textContent = `Leaves on ${dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`;
+
+            const html = leaves.map(leave => `
+                <div style="padding: 1rem; background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3B82F6; margin-bottom: 0.8rem; border-radius: 6px;">
+                    <div style="font-weight: 600; margin-bottom: 0.5rem;">👤 ${leave.name}</div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">
+                        <div>Type: ${leave.leaveType === 'sick' ? '🤒 Sick' : leave.leaveType === 'casual' ? '😊 Casual' : '👨‍👩‍👧 Family Emergency'}</div>
+                        <div>From: ${leave.startDate} To: ${leave.endDate}</div>
+                        <div>Duration: ${leave.numberOfDays} day(s)</div>
+                    </div>
+                </div>
+            `).join('');
+
+            content.innerHTML = html;
+            modal.style.display = 'flex';
+        }
+
+        function closeDayModal() {
+            document.getElementById('dayModal').style.display = 'none';
+        }
+
+        // Close modal on background click
+        document.getElementById('dayModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('dayModal')) {
+                closeDayModal();
+            }
+        });
+
+    </script>
+</body>
+
+</html>

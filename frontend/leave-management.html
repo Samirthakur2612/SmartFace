@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Management - SmartFace</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo-container">
+                <img src="/assets/logo.png" alt="SmartFace logo" class="logo-img" />
+                <div class="logo-text">
+                    <h2>SmartFace</h2>
+                    <p>Admin Panel</p>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/dashboard" class="nav-item">View Attendance</a></li>
+                <li><a href="/attendance-scan" class="nav-item">Attendance Scan</a></li>
+                <li><a href="/register" class="nav-item">Register Student</a></li>
+                <li><a href="/students" class="nav-item">Manage Students</a></li>
+                <li><a href="/add-class" class="nav-item">➕ Add Class</a></li>
+                <li><a href="/class-management" class="nav-item">📅 Manage Classes</a></li>
+                <li><a href="/leave-management" class="nav-item active">Leave Requests</a></li>
+            </ul>
+            <a href="#" class="nav-item logout-btn" id="logoutBtn">Logout</a>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1>Leave Management</h1>
+                <p>Review and manage student leave requests</p>
+            </div>
+
+            <!-- Tabs -->
+            <div style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <button class="tab-btn active" onclick="switchTab('pending')">⏳ Pending Requests</button>
+                <button class="tab-btn" onclick="switchTab('all')">📋 All Requests</button>
+            </div>
+
+            <!-- Pending Requests Tab -->
+            <div id="pending-tab" class="tab-content">
+                <div class="glass-card">
+                    <h3>Pending Leave Applications</h3>
+                    <div id="pendingLeaves" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                            Loading...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Requests Tab -->
+            <div id="all-tab" class="tab-content" style="display: none;">
+                <div class="glass-card">
+                    <h3>All Leave Applications</h3>
+                    <div style="overflow-x: auto;">
+                        <table id="allLeavesTable" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid rgba(255,255,255,0.1);">
+                                    <th style="padding: 1rem; text-align: left;">Student</th>
+                                    <th style="padding: 1rem; text-align: left;">Type</th>
+                                    <th style="padding: 1rem; text-align: left;">Duration</th>
+                                    <th style="padding: 1rem; text-align: center;">Days</th>
+                                    <th style="padding: 1rem; text-align: left;">Status</th>
+                                    <th style="padding: 1rem; text-align: left;">Applied</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allLeavesBody">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                        Loading...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Approval Modal -->
+    <div id="approvalModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div class="glass-card" style="max-width: 500px; width: 90%;">
+            <h3 id="modalTitle">Approve Leave</h3>
+            <div id="modalContent" style="margin: 1.5rem 0; color: var(--text-muted);"></div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button class="btn" onclick="closeModal()" style="background: rgba(255,255,255,0.1);">Cancel</button>
+                <button class="btn btn-primary" id="confirmBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        const PUBLISHABLE_KEY = 'pk_test_Y29tcG9zZWQtd2Fib28tODIuY2xlcmsuYWNjb3VudHMuZGV2JA';
+        const script = document.createElement('script');
+        script.src = 'https://composed-wahoo-82.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        script.setAttribute('data-clerk-publishable-key', PUBLISHABLE_KEY);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+
+        script.addEventListener('load', async function () {
+            await window.Clerk.load({
+                signInUrl: 'https://composed-wahoo-82.accounts.dev/sign-in',
+                signUpUrl: 'https://composed-wahoo-82.accounts.dev/sign-up'
+            });
+            // Don't redirect immediately - let page load and API calls handle auth
+            if (!window.Clerk.user) {
+                window.Clerk.redirectToSignIn({ returnBackUrl: window.location.href });
+            } else {
+                const user = await requirePageRole('admin');
+                if (user) loadPendingLeaves();
+            }
+        });
+        document.body.appendChild(script);
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+
+        let currentAction = null;
+        let currentLeaveId = null;
+
+        // Tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(tabName + '-tab').style.display = 'block';
+            event.target.classList.add('active');
+
+            if (tabName === 'pending') {
+                loadPendingLeaves();
+            } else {
+                loadAllLeaves();
+            }
+        }
+
+        // Load pending leaves
+        async function loadPendingLeaves() {
+            try {
+                const res = await apiFetch('/api/leaves/admin/pending');
+                const leaves = await res.json();
+
+                if (leaves.length === 0) {
+                    document.getElementById('pendingLeaves').innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 2rem;">✅ No pending requests</div>';
+                    return;
+                }
+
+                const html = leaves.map(leave => `
+                    <div style="padding: 1.5rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; background: rgba(0,0,0,0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
+                                    👤 ${leave.name} (${leave.studentId})
+                                </div>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1rem 0;">
+                                    <div>
+                                        <span style="color: var(--text-muted); font-size: 0.9rem;">Leave Type</span><br>
+                                        <strong>${leave.leaveType === 'sick' ? '🤒 Sick Leave' : 
+                                                  leave.leaveType === 'familyEmergency' ? '👨‍👩‍👧 Family Emergency' : 
+                                                  leave.leaveType === 'casual' ? '😊 Casual Leave' : '📝 Other'}</strong>
+                                    </div>
+                                    <div>
+                                        <span style="color: var(--text-muted); font-size: 0.9rem;">Duration</span><br>
+                                        <strong>${leave.numberOfDays} day(s)</strong>
+                                    </div>
+                                    <div>
+                                        <span style="color: var(--text-muted); font-size: 0.9rem;">From</span><br>
+                                        <strong>${leave.startDate}</strong>
+                                    </div>
+                                    <div>
+                                        <span style="color: var(--text-muted); font-size: 0.9rem;">To</span><br>
+                                        <strong>${leave.endDate}</strong>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                                    <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.3rem;">Reason:</div>
+                                    <div style="color: var(--text-primary);">${leave.reason}</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                                <button class="btn btn-primary" style="background: rgba(34, 197, 94, 0.2); color: #22C55E;" onclick="openApprovalModal('${leave._id}', 'approve')">✅ Approve</button>
+                                <button class="btn" style="background: rgba(239, 68, 68, 0.2); color: #EF4444;" onclick="openApprovalModal('${leave._id}', 'reject')">❌ Reject</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                document.getElementById('pendingLeaves').innerHTML = html;
+            } catch (err) {
+                console.error('Error:', err);
+                document.getElementById('pendingLeaves').innerHTML = '<div style="color: #EF4444; text-align: center;">Error loading pending leaves</div>';
+            }
+        }
+
+        // Load all leaves
+        async function loadAllLeaves() {
+            try {
+                const res = await apiFetch('/api/leaves/admin/all');
+                const leaves = await res.json();
+
+                const tbody = document.getElementById('allLeavesBody');
+                if (leaves.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">No leave records</td></tr>';
+                    return;
+                }
+
+                const html = leaves.map(leave => {
+                    const statusColor = {
+                        'pending': '#F59E0B',
+                        'approved': '#10B981',
+                        'rejected': '#EF4444'
+                    }[leave.status];
+
+                    const statusEmoji = {
+                        'pending': '⏳',
+                        'approved': '✅',
+                        'rejected': '❌'
+                    }[leave.status];
+
+                    return `
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); hover: background: rgba(255,255,255,0.02);">
+                            <td style="padding: 1rem;">${leave.name}</td>
+                            <td style="padding: 1rem;">${leave.leaveType === 'sick' ? '🤒' : leave.leaveType === 'familyEmergency' ? '👨‍👩‍👧' : '😊'}</td>
+                            <td style="padding: 1rem; font-size: 0.9rem;">${leave.startDate}<br>to ${leave.endDate}</td>
+                            <td style="padding: 1rem; text-align: center;"><strong>${leave.numberOfDays}</strong></td>
+                            <td style="padding: 1rem; color: ${statusColor};"><strong>${statusEmoji} ${leave.status.toUpperCase()}</strong></td>
+                            <td style="padding: 1rem; font-size: 0.9rem;">${new Date(leave.appliedDate).toLocaleDateString()}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                tbody.innerHTML = html;
+            } catch (err) {
+                console.error('Error:', err);
+                document.getElementById('allLeavesBody').innerHTML = '<tr><td colspan="6" style="color: #EF4444; text-align: center;">Error loading leaves</td></tr>';
+            }
+        }
+
+        // Modal functions
+        function openApprovalModal(leaveId, action) {
+            currentLeaveId = leaveId;
+            currentAction = action;
+
+            const modal = document.getElementById('approvalModal');
+            const title = document.getElementById('modalTitle');
+            const content = document.getElementById('modalContent');
+            const confirmBtn = document.getElementById('confirmBtn');
+
+            if (action === 'approve') {
+                title.textContent = '✅ Approve Leave';
+                content.innerHTML = `
+                    <p>Are you sure you want to <strong>approve</strong> this leave request?</p>
+                    <p style="font-size: 0.95rem; margin-top: 1rem;">The student will be automatically marked as "Leave" for the requested period.</p>
+                    <div style="margin-top: 1rem;">
+                        <label style="color: var(--text-primary);">Comments (optional):</label><br>
+                        <textarea id="approvalComments" placeholder="Add your comments..." style="width: 100%; padding: 0.7rem; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); border-radius: 8px; color: var(--text-primary); margin-top: 0.5rem;" rows="3"></textarea>
+                    </div>
+                `;
+                confirmBtn.style.background = 'rgba(34, 197, 94, 0.3)';
+                confirmBtn.style.color = '#22C55E';
+                confirmBtn.textContent = '✅ Yes, Approve';
+            } else {
+                title.textContent = '❌ Reject Leave';
+                content.innerHTML = `
+                    <p>Are you sure you want to <strong>reject</strong> this leave request?</p>
+                    <div style="margin-top: 1rem;">
+                        <label style="color: var(--text-primary);">Reason for rejection:</label><br>
+                        <textarea id="approvalComments" placeholder="Please provide reason for rejection..." style="width: 100%; padding: 0.7rem; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); border-radius: 8px; color: var(--text-primary); margin-top: 0.5rem;" rows="3" required></textarea>
+                    </div>
+                `;
+                confirmBtn.style.background = 'rgba(239, 68, 68, 0.3)';
+                confirmBtn.style.color = '#EF4444';
+                confirmBtn.textContent = '❌ Yes, Reject';
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('approvalModal').style.display = 'none';
+            currentLeaveId = null;
+            currentAction = null;
+        }
+
+        document.getElementById('confirmBtn').addEventListener('click', async () => {
+            const comments = document.getElementById('approvalComments').value;
+            const endpoint = currentAction === 'approve' ? 'approve' : 'reject';
+
+            try {
+                const res = await apiFetch(`/api/leaves/${currentLeaveId}/${endpoint}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comments })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(`✅ Leave ${currentAction}d successfully!`, 'success');
+                    closeModal();
+                    loadPendingLeaves();
+                    loadAllLeaves();
+                } else {
+                    showToast(data.message || `Error ${currentAction}ing leave`, 'error');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showToast('Failed to process leave request', 'error');
+            }
+        });
+
+        // Close modal on background click
+        document.getElementById('approvalModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('approvalModal')) {
+                closeModal();
+            }
+        });
+
+        // Add styles for tabs
+        const style = document.createElement('style');
+        style.textContent = `
+            .tab-btn {
+                background: transparent;
+                border: none;
+                color: var(--text-muted);
+                padding: 0.8rem 1.5rem;
+                cursor: pointer;
+                font-size: 1rem;
+                transition: color 0.3s;
+                border-bottom: 2px solid transparent;
+            }
+            .tab-btn:hover {
+                color: var(--text-primary);
+            }
+            .tab-btn.active {
+                color: #3B82F6;
+                border-bottom-color: #3B82F6;
+            }
+            table tr:hover {
+                background: rgba(255,255,255,0.02);
+            }
+        `;
+        document.head.appendChild(style);
+
+    </script>
+</body>
+
+</html>

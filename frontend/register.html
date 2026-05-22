@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartFace</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- face-api.js -->
+    <script src="js/face-api.min.js"></script>
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo-container">
+                <img src="/assets/logo.png" alt="SmartFace logo" class="logo-img" />
+                <div class="logo-text">
+                    <h2>SmartFace</h2>
+                    <p>Admin Panel</p>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/dashboard" class="nav-item">View Attendance</a></li>
+                <li><a href="/attendance-records" class="nav-item">Attendance Records</a></li>
+                <li><a href="/attendance-scan" class="nav-item">Attendance Scan</a></li>
+                <li><a href="/register" class="nav-item active">Register Student</a></li>
+                <li><a href="/students" class="nav-item">Manage Students</a></li>
+                <li><a href="/add-class" class="nav-item">➕ Add Class</a></li>
+                <li><a href="/class-management" class="nav-item">📅 Manage Classes</a></li>
+                <li><a href="/leave-management" class="nav-item">Leave Requests</a></li>
+                <li><a href="/leaves-calendar" class="nav-item">Leave Calendar</a></li>
+            </ul>
+            <a href="#" class="nav-item logout-btn" id="logoutBtn">Logout</a>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1>Register New Face</h1>
+            </div>
+
+            <div class="registration-split">
+                <!-- Camera View -->
+                <div class="glass-card camera-panel">
+                    <div class="camera-container">
+                        <!-- Removed transform mirror from video style and relying on CSS instead -->
+                        <video id="video" autoplay muted playsinline></video>
+                        <canvas id="overlay"></canvas>
+                        <div id="statusText" class="status-overlay">Initializing Camera...</div>
+                    </div>
+                </div>
+
+                <!-- Form View -->
+                <div class="glass-card form-panel">
+                    <h3>Student Details</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 2rem;">Please position the face clearly in front
+                        of the camera before saving.</p>
+
+                    <form id="registerForm">
+                        <div class="form-group">
+                            <label>Student ID</label>
+                            <input type="text" id="studentId" required placeholder="Ex: CS2023001">
+                        </div>
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="name" required placeholder="John Doe">
+                        </div>
+                        <div class="form-group">
+                            <label>Student Gmail (for login)</label>
+                            <input type="email" id="email" placeholder="student@gmail.com">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" id="captureBtn" disabled>Capture &
+                            Register</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/particles.js"></script>
+    <script>
+        const PUBLISHABLE_KEY = 'pk_test_Y29tcG9zZWQtd2Fob28tODIuY2xlcmsuYWNjb3VudHMuZGV2JA';
+        const script = document.createElement('script');
+        script.src = 'https://composed-wahoo-82.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        script.setAttribute('data-clerk-publishable-key', PUBLISHABLE_KEY);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+
+        script.addEventListener('load', async function () {
+            await window.Clerk.load({
+                signInUrl: 'https://composed-wahoo-82.accounts.dev/sign-in',
+                signUpUrl: 'https://composed-wahoo-82.accounts.dev/sign-up'
+            });
+            if (!window.Clerk.user) {
+                window.Clerk.redirectToSignIn({ returnBackUrl: window.location.href });
+            } else {
+                await requirePageRole('admin');
+            }
+        });
+        document.body.appendChild(script);
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+
+        const video = document.getElementById('video');
+        const overlay = document.getElementById('overlay');
+        const statusText = document.getElementById('statusText');
+        const captureBtn = document.getElementById('captureBtn');
+        let currentDescriptor = null;
+        let faceMatcher = null;
+        let isRedirecting = false;
+        const RECOGNITION_THRESHOLD = 0.5; // lower is stricter (0.0 - 1.0)
+
+        Promise.all([
+            faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+            faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+        ]).then(init).catch(err => {
+            console.error(err);
+            statusText.textContent = "Failed to load Models";
+            statusText.style.background = 'rgba(239, 68, 68, 0.7)';
+        });
+
+        async function init() {
+            // Build a matcher from enrolled students (public endpoint, kiosk uses it too)
+            try {
+                const res = await fetch('/api/students');
+                const students = await res.json();
+                if (Array.isArray(students) && students.length > 0) {
+                    const labeled = students
+                        .filter(s => Array.isArray(s.faceDescriptor) && s.faceDescriptor.length > 0)
+                        .map(s => new faceapi.LabeledFaceDescriptors(
+                            `${s.studentId}|${s.name}`,
+                            [new Float32Array(s.faceDescriptor)]
+                        ));
+                    faceMatcher = new faceapi.FaceMatcher(labeled, 0.6);
+                }
+            } catch (err) {
+                // If this fails we still allow registering new faces
+                console.warn('Failed to load enrolled students for matching:', err);
+            } finally {
+                startVideo();
+            }
+        }
+
+        function cameraErrorMessage(err) {
+            const name = err && err.name ? err.name : 'CameraError';
+            if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                return 'Camera permission blocked. Click the lock icon in the address bar → Site settings → Allow Camera, then refresh.';
+            }
+            if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+                return 'No camera found. Plug in/enable a webcam and refresh.';
+            }
+            if (name === 'NotReadableError' || name === 'TrackStartError') {
+                return 'Camera is busy (used by another app like Zoom/Teams). Close it and refresh.';
+            }
+            if (name === 'NotSecureError') {
+                return 'Camera requires a secure context. Use http://localhost:5000 (not a file path or IP).';
+            }
+            return `Camera error: ${name}. Try allowing permission and refreshing.`;
+        }
+
+        function startVideo() {
+            statusText.textContent = "Starting Camera...";
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+                .then(stream => {
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    console.error(err);
+                    statusText.textContent = cameraErrorMessage(err);
+                    statusText.style.background = 'rgba(239, 68, 68, 0.7)';
+                });
+        }
+
+        video.addEventListener('play', () => {
+            statusText.textContent = "Waiting for face...";
+            const displaySize = { width: video.width || 640, height: video.height || 480 };
+            faceapi.matchDimensions(overlay, displaySize);
+
+            setInterval(async () => {
+                if (video.paused || video.ended || isRedirecting) return;
+
+                const detections = await faceapi.detectSingleFace(video)
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+
+                const ctx = overlay.getContext('2d');
+                ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+                if (detections) {
+                    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
+                    // Draw bounding box
+                    const box = resizedDetections.detection.box;
+                    ctx.strokeStyle = '#10B981'; // Green
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+                    statusText.textContent = "Face Detected - Ready to Capture";
+                    statusText.style.background = 'rgba(16, 185, 129, 0.7)';
+                    captureBtn.disabled = false;
+                    currentDescriptor = Array.from(detections.descriptor);
+
+                    // Previously we used to redirect to attendance if a matching face
+                    // was detected. For registration we no longer perform that action,
+                    // allowing admins to register even if the face is already known.
+                    // The matching logic is still useful for display or later checks,
+                    // but we won’t interrupt the registration workflow here.
+                    //
+                    // Example of how you might show a warning instead:
+                    // if (faceMatcher) {
+                    //     const best = faceMatcher.findBestMatch(detections.descriptor);
+                    //     if (best && best.label !== 'unknown' && best.distance < RECOGNITION_THRESHOLD) {
+                    //         statusText.textContent = `${best.label.split('|')[1]} already registered.`;
+                    //         statusText.style.background = 'rgba(239, 68, 68, 0.7)';
+                    //     }
+                    // }
+                } else {
+                    statusText.textContent = "No Face Detected";
+                    statusText.style.background = 'rgba(239, 68, 68, 0.7)';
+                    captureBtn.disabled = true;
+                    currentDescriptor = null;
+                }
+            }, 500); // Check every 500ms
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!currentDescriptor) {
+                showToast("No face detected precisely.", "error");
+                return;
+            }
+
+            const studentId = document.getElementById('studentId').value;
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value.trim() || null;
+
+            const btnOriginalText = captureBtn.textContent;
+            captureBtn.textContent = 'Checking for duplicates...';
+            captureBtn.disabled = true;
+
+            try {
+                const res = await apiFetch('/api/students', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId,
+                        name,
+                        email,
+                        faceDescriptor: currentDescriptor
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(`✓ ${name} registered successfully! (No duplicate faces found)`, 'success');
+                    document.getElementById('registerForm').reset();
+                    currentDescriptor = null;
+                    captureBtn.disabled = true;
+                    statusText.textContent = "Initializing Camera...";
+                    statusText.style.background = 'rgba(0,0,0,0.7)';
+                    
+                    // Redirect after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = '/students';
+                    }, 2000);
+                } else if (res.status === 409) {
+                    // Duplicate face detected
+                    statusText.textContent = "❌ Duplicate Face Detected!";
+                    statusText.style.background = 'rgba(239, 68, 68, 0.7)';
+                    showToast(`🚫 This face already belongs to ${data.matchedStudent}. Cannot register duplicate face.`, 'error');
+                    console.warn('Duplicate face detected:', data.matchedStudent);
+                    currentDescriptor = null;
+                    captureBtn.disabled = true;
+                } else {
+                    showToast(data.message || 'Registration failed', 'error');
+                    console.error('Registration error:', data);
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Server connection error', 'error');
+            } finally {
+                captureBtn.textContent = btnOriginalText;
+                if (!document.getElementById('registerForm').style.display || document.getElementById('registerForm').style.display !== 'none') {
+                    captureBtn.disabled = false;
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Class - SmartFace</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .add-class-container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .form-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-section h3 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
+            font-size: 1.2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.7rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .form-group label .required {
+            color: var(--danger-color);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.9rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-color);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: rgba(59, 130, 246, 0.5);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .time-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-top: 0.8rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            padding: 0.7rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .info-box {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: #93c5fd;
+            font-size: 0.95rem;
+        }
+
+        .info-box strong {
+            color: #bfdbfe;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .success-message {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            color: #a7f3d0;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-message {
+            color: var(--danger-color);
+            font-size: 0.9rem;
+            margin-top: 0.4rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .header-subtitle {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-section {
+                padding: 1.5rem;
+            }
+
+            .time-inputs {
+                grid-template-columns: 1fr;
+            }
+
+            .checkbox-group {
+                grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo-container">
+                <img src="/assets/logo.png" alt="SmartFace logo" class="logo-img" />
+                <div class="logo-text">
+                    <h2>SmartFace</h2>
+                    <p>Admin Panel</p>
+                </div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/dashboard" class="nav-item">View Attendance</a></li>
+                <li><a href="/attendance-records" class="nav-item">Attendance Records</a></li>
+                <li><a href="/attendance-scan" class="nav-item">Attendance Scan</a></li>
+                <li><a href="/register" class="nav-item">Register Student</a></li>
+                <li><a href="/students" class="nav-item">Manage Students</a></li>
+                <li><a href="/add-class" class="nav-item active">Add Class</a></li>
+                <li><a href="/class-management" class="nav-item">Manage Classes</a></li>
+                <li><a href="/leave-management" class="nav-item">Leave Requests</a></li>
+                <li><a href="/leaves-calendar" class="nav-item">Leave Calendar</a></li>
+            </ul>
+            <a href="#" class="nav-item logout-btn" id="logoutBtn">Logout</a>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1>Add New Class</h1>
+                <p class="header-subtitle">Create a new class with timing and schedule</p>
+            </div>
+
+            <div class="add-class-container">
+                <!-- Success Message -->
+                <div id="successMessage" class="success-message">
+                    <strong>✓ Success!</strong> Class "<span id="successClassName"></span>" has been created successfully.
+                </div>
+
+                <!-- Class Information Section -->
+                <div class="form-section">
+                    <h3>Class Information</h3>
+                    
+                    <div class="info-box">
+                        <strong>💡 Tip:</strong> Fill in the class name and description to make it easy to identify.
+                    </div>
+
+                    <div class="form-group">
+                        <label for="className">
+                            Class Name <span class="required">*</span>
+                        </label>
+                        <input type="text" id="className" placeholder="e.g., Mathematics-A, English-B, Physics-101" required>
+                        <span class="error-message" id="error-className">Please enter a class name</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">
+                            Description <span style="color: var(--text-muted);">(Optional)</span>
+                        </label>
+                        <textarea id="description" placeholder="Add any notes about this class... e.g., Room number, teacher name, etc."></textarea>
+                    </div>
+                </div>
+
+                <!-- Timing Section -->
+                <div class="form-section">
+                    <h3>Timing</h3>
+                    
+                    <div class="info-box">
+                        <strong>⏰ Note:</strong> Use 24-hour format (e.g., 09:00 for 9:00 AM, 14:30 for 2:30 PM)
+                    </div>
+
+                    <div class="time-inputs">
+                        <div class="form-group">
+                            <label for="startTime">
+                                Start Time <span class="required">*</span>
+                            </label>
+                            <input type="time" id="startTime" required>
+                            <span class="error-message" id="error-startTime">Please select start time</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="endTime">
+                                End Time <span class="required">*</span>
+                            </label>
+                            <input type="time" id="endTime" required>
+                            <span class="error-message" id="error-endTime">Please select end time</span>
+                        </div>
+                    </div>
+
+                    <div id="timingError" class="error-message"></div>
+                </div>
+
+                <!-- Schedule Section -->
+                <div class="form-section">
+                    <h3>Schedule</h3>
+                    
+                    <div class="info-box">
+                        <strong>📅 Optional:</strong> Select specific days, or leave blank for a daily class.
+                    </div>
+
+                    <label>Active Days</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="day-Monday" value="Monday">
+                            <label for="day-Monday">Monday</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="day-Tuesday" value="Tuesday">
+                            <label for="day-Tuesday">Tuesday</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="day-Wednesday" value="Wednesday">
+                            <label for="day-Wednesday">Wednesday</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="day-Thursday" value="Thursday">
+                            <label for="day-Thursday">Thursday</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="day-Friday" value="Friday">
+                            <label for="day-Friday">Friday</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="day-Saturday" value="Saturday">
+                            <label for="day-Saturday">Saturday</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="day-Sunday" value="Sunday">
+                            <label for="day-Sunday">Sunday</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="button-group">
+                    <button class="btn btn-primary" id="addClassBtn">Create Class</button>
+                    <button class="btn btn-secondary" id="resetBtn">Clear Form</button>
+                </div>
+
+                <!-- Manage Classes Link -->
+                <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <p style="color: var(--text-muted); margin-bottom: 1rem;">Want to view or edit existing classes?</p>
+                    <a href="/class-management" class="btn btn-secondary" style="display: inline-block; width: auto; padding: 0.8rem 2rem;">
+                        Go to Class Management →
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/particles.js"></script>
+    <script>
+        const PUBLISHABLE_KEY = 'pk_test_Y29tcG9zZWQtd2Fob28tODIuY2xlcmsuYWNjb3VudHMuZGV2JA';
+        const script = document.createElement('script');
+        script.src = 'https://composed-wahoo-82.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        script.setAttribute('data-clerk-publishable-key', PUBLISHABLE_KEY);
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+
+        script.addEventListener('load', async function () {
+            await window.Clerk.load({
+                signInUrl: 'https://composed-wahoo-82.accounts.dev/sign-in',
+                signUpUrl: 'https://composed-wahoo-82.accounts.dev/sign-up'
+            });
+            if (!window.Clerk.user) {
+                window.Clerk.redirectToSignIn({ returnBackUrl: window.location.href });
+            } else {
+                await requirePageRole('admin');
+            }
+        });
+        document.body.appendChild(script);
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+
+        // Clear error message when user types
+        document.getElementById('className').addEventListener('input', () => {
+            document.getElementById('error-className').classList.remove('show');
+        });
+        document.getElementById('startTime').addEventListener('change', () => {
+            document.getElementById('error-startTime').classList.remove('show');
+            document.getElementById('timingError').classList.remove('show');
+        });
+        document.getElementById('endTime').addEventListener('change', () => {
+            document.getElementById('error-endTime').classList.remove('show');
+            document.getElementById('timingError').classList.remove('show');
+        });
+
+        function validateForm() {
+            let isValid = true;
+            const className = document.getElementById('className').value.trim();
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            // Clear all errors first
+            document.getElementById('error-className').classList.remove('show');
+            document.getElementById('error-startTime').classList.remove('show');
+            document.getElementById('error-endTime').classList.remove('show');
+            document.getElementById('timingError').classList.remove('show');
+
+            // Validate class name
+            if (!className) {
+                document.getElementById('error-className').classList.add('show');
+                isValid = false;
+            }
+
+            // Validate start time
+            if (!startTime) {
+                document.getElementById('error-startTime').classList.add('show');
+                isValid = false;
+            }
+
+            // Validate end time
+            if (!endTime) {
+                document.getElementById('error-endTime').classList.add('show');
+                isValid = false;
+            }
+
+            // Validate that end time is after start time
+            if (startTime && endTime && endTime <= startTime) {
+                document.getElementById('timingError').textContent = '⚠️ End time must be after start time';
+                document.getElementById('timingError').classList.add('show');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        document.getElementById('addClassBtn').addEventListener('click', async () => {
+            if (!validateForm()) return;
+
+            const className = document.getElementById('className').value.trim();
+            let startTime = document.getElementById('startTime').value;
+            let endTime = document.getElementById('endTime').value;
+            const description = document.getElementById('description').value.trim();
+            
+            // Ensure time format is HH:MM
+            if (startTime && startTime.length === 5) {
+                // Already in HH:MM format
+            } else if (startTime) {
+                console.warn('Start time format issue:', startTime);
+            }
+            
+            if (endTime && endTime.length === 5) {
+                // Already in HH:MM format
+            } else if (endTime) {
+                console.warn('End time format issue:', endTime);
+            }
+            
+            const days = [];
+            ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].forEach(day => {
+                if (document.getElementById(`day-${day}`).checked) {
+                    days.push(day);
+                }
+            });
+
+            console.log('Submitting class data:', { className, startTime, endTime, dayOfWeek: days, description });
+
+            const btn = document.getElementById('addClassBtn');
+            const originalText = btn.textContent;
+            btn.innerHTML = '<span class="loading"></span>Creating...';
+            btn.disabled = true;
+
+            try {
+                const res = await apiFetch('/api/classes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        className,
+                        startTime,
+                        endTime,
+                        dayOfWeek: days,
+                        description
+                    })
+                });
+
+                console.log('API Response status:', res.status);
+
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('Success response:', data);
+                    
+                    // Show success message
+                    document.getElementById('successClassName').textContent = className;
+                    document.getElementById('successMessage').classList.add('show');
+
+                    // Clear form
+                    document.getElementById('className').value = '';
+                    document.getElementById('startTime').value = '';
+                    document.getElementById('endTime').value = '';
+                    document.getElementById('description').value = '';
+                    document.querySelectorAll('.checkbox-item input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+                    // Show toast
+                    showToast(`✓ Class "${className}" created successfully!`, 'success');
+
+                    // Hide success message after 5 seconds
+                    setTimeout(() => {
+                        document.getElementById('successMessage').classList.remove('show');
+                    }, 5000);
+                } else {
+                    const error = await res.json();
+                    console.error('API Error response:', error);
+                    showToast(error.message || 'Error creating class', 'error');
+                }
+            } catch (err) {
+                console.error('Catch error:', err);
+                showToast('Error creating class. Please try again. Check console for details.', 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            document.getElementById('className').value = '';
+            document.getElementById('startTime').value = '';
+            document.getElementById('endTime').value = '';
+            document.getElementById('description').value = '';
+            document.querySelectorAll('.checkbox-item input[type="checkbox"]').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.error-message').forEach(err => err.classList.remove('show'));
+            showToast('Form cleared', 'info');
+        });
+    </script>
+</body>
+
+</html>
