@@ -1,37 +1,14 @@
 {
   "version": 2,
-  "routes": [
-    {
-      "src": "^/assets/.*",
-      "dest": "/assets/:path"
-    },
-    {
-      "src": "^/models/.*",
-      "dest": "/models/:path"
-    },
-    {
-      "src": "^/css/.*",
-      "dest": "/css/:path"
-    },
-    {
-      "src": "^/js/.*",
-      "dest": "/js/:path"
-    },
-    {
-      "src": "^/api/.*",
-      "dest": "/api/:path"
-    },
-    {
-      "src": "^/.*\\.html$",
-      "dest": "/:path.html"
-    },
-    {
-      "src": "^/$",
-      "dest": "/index.html"
-    },
-    {
-      "src": "^/([a-zA-Z0-9-]+)/?$",
-      "dest": "/$1.html"
-    }
+  "buildCommand": "echo 'Static site'",
+  "outputDirectory": "frontend",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/assets/(.*)", "destination": "/assets/$1" },
+    { "source": "/css/(.*)", "destination": "/css/$1" },
+    { "source": "/js/(.*)", "destination": "/js/$1" },
+    { "source": "/models/(.*)", "destination": "/models/$1" },
+    { "source": "/(.*).html", "destination": "/$1.html" },
+    { "source": "/(?!assets|css|js|api|models)([^.]+)$", "destination": "/$1.html" }
   ]
 }
