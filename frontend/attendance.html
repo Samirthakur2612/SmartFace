@@ -96,6 +96,9 @@
         const logsContainer = document.getElementById('logsContainer');
 
         // Configuration
+        const API_BASE_URL = window.location.hostname === 'localhost' 
+          ? 'http://localhost:5000' 
+          : 'https://your-backend-url.render.com';  // Replace with actual Render URL after deployment
         const RECOGNITION_THRESHOLD = 0.5; // lower is stricter (0.0 to 1.0)
         let labeledFaceDescriptors = [];
         let faceMatcher = null;
@@ -115,7 +118,7 @@
                 statusText.textContent = "Fetching Enrolled Students...";
 
                 // 2. Fetch Known Descriptors
-                const res = await fetch('/api/students');
+                const res = await fetch(API_BASE_URL + '/api/students');
                 const students = await res.json();
 
                 if (students.length === 0) {
@@ -240,7 +243,7 @@
             statusText.style.background = 'rgba(16, 185, 129, 0.7)';
 
             try {
-                const res = await fetch('/api/attendance', {
+                const res = await fetch(API_BASE_URL + '/api/attendance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ studentId, name })

@@ -1,6 +1,11 @@
 // Common utilities
 const LOGIN_PAGES = ['/', '/index.html', '/waiting-approval', '/admin-approval', '/link-student'];
 
+// API Configuration — change this to your deployed backend URL
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5000' 
+  : 'https://your-backend-url.render.com';  // Replace with actual Render URL after deployment
+
 function isLoginPage() {
     return LOGIN_PAGES.includes(window.location.pathname);
 }
@@ -297,11 +302,14 @@ async function apiFetch(url, options = {}, config = {}) {
     const authHeaders = await getAuthHeaders();
     const headers = { ...(options.headers || {}), ...authHeaders };
 
+    // Prepend API_BASE_URL if url is a path (starts with /)
+    const fullUrl = url.startsWith('http') ? url : API_BASE_URL + url;
+
     let res;
     try {
-        res = await fetch(url, { ...options, headers });
+        res = await fetch(fullUrl, { ...options, headers });
     } catch (err) {
-        console.error('Network error:', url, err);
+        console.error('Network error:', fullUrl, err);
         throw err;
     }
 
