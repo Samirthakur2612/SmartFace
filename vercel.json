@@ -2,11 +2,35 @@
   "version": 2,
   "routes": [
     {
+      "src": "^/assets/.*",
+      "dest": "/assets/:path"
+    },
+    {
+      "src": "^/models/.*",
+      "dest": "/models/:path"
+    },
+    {
+      "src": "^/css/.*",
+      "dest": "/css/:path"
+    },
+    {
+      "src": "^/js/.*",
+      "dest": "/js/:path"
+    },
+    {
+      "src": "^/api/.*",
+      "dest": "/api/:path"
+    },
+    {
+      "src": "^/.*\\.html$",
+      "dest": "/:path.html"
+    },
+    {
       "src": "^/$",
       "dest": "/index.html"
     },
     {
-      "src": "^/(.*)$",
+      "src": "^/([a-zA-Z0-9-]+)/?$",
       "dest": "/$1.html"
     }
   ]
