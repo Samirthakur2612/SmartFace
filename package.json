@@ -9,6 +9,7 @@
   "main": "index.js",
   "scripts": {
     "install": "npm --prefix backend install",
+    "postinstall": "npm --prefix backend install",
     "start": "npm --prefix backend start",
     "backend:dev": "npm --prefix backend run dev",
     "backend:start": "npm --prefix backend run start",
