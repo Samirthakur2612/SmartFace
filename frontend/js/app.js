@@ -2,9 +2,9 @@
 const LOGIN_PAGES = ['/', '/index.html', '/waiting-approval', '/admin-approval', '/link-student'];
 
 // API Configuration — change this to your deployed backend URL
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5000' 
-  : 'https://your-backend-url.render.com';  // Replace with actual Render URL after deployment
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5000'
+  : 'https://smartface-60md.onrender.com';
 
 function isLoginPage() {
     return LOGIN_PAGES.includes(window.location.pathname);
